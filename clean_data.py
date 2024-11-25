@@ -43,19 +43,6 @@ def format_date(date_str):
     except Exception:
         return None
 
-# Convertir la note en entier (si possible), sinon rien
-def format_rating(rating):
-    """
-    Convertit la note en entier si possible, sinon retourne None.
-    
-    :param rating: Note à convertir
-    :return: Note sous forme d'entier ou None
-    """
-    try:
-        return int(rating)
-    except (ValueError, TypeError):
-        return None
-
 # Nettoyer et structurer les données
 def clean_and_structure_data(file_path, output_path):
     """
@@ -74,15 +61,12 @@ def clean_and_structure_data(file_path, output_path):
             print(f"Colonne manquante : {col}")
             return
 
-    # Appliquer les nettoyages sur les colonnes
     df["Username"] = df["Username"].apply(clean_text)
     df["Title"] = df["Title"].apply(clean_text)
     df["Content"] = df["Content"].apply(clean_text)
     df["Date"] = df["Date"].apply(format_date)
-    df["Rating"] = df["Rating"].apply(format_rating)  # Convertir la note en entier
-
-    # Supprimer les lignes avec des notes ou dates manquantes
-    df = df.dropna(subset=["Rating", "Date"])
+    df["Rating"] = pd.to_numeric(df["Rating"], errors="coerce")  # Convertir en numérique
+    df = df.dropna(subset=["Rating", "Date"])  # Supprimer les lignes avec notes ou dates manquantes
 
     # Sauvegarder les données nettoyées dans un nouveau fichier CSV
     try:
