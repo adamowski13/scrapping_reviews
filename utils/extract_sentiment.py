@@ -41,7 +41,7 @@ def extract_keywords(df, n_keywords=10):
     sorted_indices = tfidf_matrix.sum(axis=0).argsort()[0, ::-1]  # Tri des indices des mots-clés
     # Récupérer les meilleurs mots-clés
     keywords = [feature_names[i] for i in sorted_indices[:n_keywords]]
-    return keywords, docterm
+    return pd.DataFrame(docterm) # keywords, docterm
 
 def analyse_all_sentiments(data_frame):
 
