@@ -44,7 +44,7 @@ def format_date(date_str):
         return None
 
 # Nettoyer et structurer les données
-def clean_and_structure_data(file_path, output_path):
+def clean_and_structure_data(file_path):
     """
     Charge un fichier CSV, nettoie et structure les données, puis sauvegarde le fichier nettoyé.
     
