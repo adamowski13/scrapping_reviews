@@ -4,122 +4,81 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from transformers import pipeline
 from transformers import logging as transformers_logging
-import logging
+import torch
+from tqdm import tqdm
 
-# Configurer le logging
+# Configuration du logging
 transformers_logging.set_verbosity_error()
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# Vérifie si un GPU est disponible
+DEVICE = 0 if torch.cuda.is_available() else -1
+
+# Pipeline BERT pour l'analyse de sentiment
+bert_analyzer = pipeline(
+    task='text-classification',
+    model="nlptown/bert-base-multilingual-uncased-sentiment",
+    tokenizer="nlptown/bert-base-multilingual-uncased-sentiment",
+    device=DEVICE
+)
+
+# Mappage des labels de BERT
+label2emotion = {
+    '1 star': "très négatif",
+    '2 stars': "négatif",
+    '3 stars': "neutre",
+    '4 stars': "positif",
+    '5 stars': "très positif"
+}
 
 # Fonction d'analyse de sentiment avec TextBlob
-def _analyze_sentiment_textblob(text):
+def analyze_sentiment_textblob(text):
     try:
         analysis = TextBlob(text)
         return analysis.sentiment.polarity
-    except Exception as e:
-        logger.error(f"Erreur dans l'analyse avec TextBlob: {e}")
+    except Exception:
         return None
 
 # Fonction d'analyse de sentiment avec VADER
-def _analyze_sentiment_vader(text):
-    analyzer = SentimentIntensityAnalyzer()
+def analyze_sentiment_vader(text):
     try:
+        analyzer = SentimentIntensityAnalyzer()
         sentiment_score = analyzer.polarity_scores(text)
         return sentiment_score['compound']
-    except Exception as e:
-        logger.error(f"Erreur dans l'analyse avec VADER: {e}")
-        return None
-
-# Appliquer TF-IDF sur le contenu pour extraire les mots-clés
-def extract_keywords(df, n_keywords=10):
-    logger.info("Début de l'extraction des mots-clés")
-    try:
-        vectorizer = TfidfVectorizer(stop_words='english', max_features=50)
-        tfidf_matrix = vectorizer.fit_transform(df['Content'])
-
-        feature_names = vectorizer.get_feature_names_out()
-        docterm = pd.DataFrame(tfidf_matrix.todense(), columns=feature_names)
-
-        sorted_indices = tfidf_matrix.sum(axis=0).argsort()[0, ::-1]
-        keywords = [feature_names[i] for i in sorted_indices[:n_keywords]]
-
-        logger.info("Extraction des mots-clés terminée avec succès")
-        return pd.DataFrame(docterm)  # keywords, docterm
-    except Exception as e:
-        logger.error(f"Erreur dans l'extraction des mots-clés: {e}")
+    except Exception:
         return None
 
 # Fonction d'analyse de sentiment avec BERT
-def _analyze_sentiment_bert(text):
-
-    analyzer = pipeline(
-        task='text-classification',
-        model="nlptown/bert-base-multilingual-uncased-sentiment",
-        tokenizer="nlptown/bert-base-multilingual-uncased-sentiment"
-    )
-    
-    label2emotion = {
-        '1 star': "très négatif",
-        '2 stars': "négatif",
-        '3 stars': "neutre",
-        '4 stars': "positif",
-        '5 stars': "très positif"
-    }
-        
+def analyze_sentiment_bert(text):
     try:
-        result = analyzer(text, return_all_scores=True)
+        result = bert_analyzer(text, truncation=True, max_length=512, return_all_scores=True)
         max_result = max(result[0], key=lambda x: x['score'])
-        label = label2emotion[max_result['label']]  # Mappage vers l'émotion
-        prob = round(max_result['score'] * 100, 2)  # Probabilité en pourcentage
+        label = label2emotion[max_result['label']]
+        prob = round(max_result['score'] * 100, 2)
         return label, prob
-    except Exception as e:
-        logger.error(f"Erreur dans l'analyse avec BERT: {e}")
+    except Exception:
         return None, None
+
+# Extraction des mots-clés avec TF-IDF
+def extract_keywords(df, n_keywords=10):
+    try:
+        vectorizer = TfidfVectorizer(stop_words='english', max_features=n_keywords)
+        tfidf_matrix = vectorizer.fit_transform(df['Content'].astype(str))
+        feature_names = vectorizer.get_feature_names_out()
+        return feature_names
+    except Exception as e:
+        print(f"Erreur d'extraction des mots-clés : {e}")
+        return []
+
+# Fonction principale d'analyse des sentiments
+def analyze_sentiments(data_frame):
+    tqdm.pandas(desc="Analyse des sentiments")
     
-
-# Analyse des sentiments sur l'ensemble du dataframe
-def analyse_all_sentiments(data_frame):
-    # Initialiser des listes pour stocker les résultats d'analyse des sentiments
-    sentiment_textblob = []
-    sentiment_vader = []
-    sentiment_label = []
-    sentiment_prob = []
+    # Ajoute les colonnes calculées
+    data_frame['Sentiment_TextBlob'] = data_frame['Content'].progress_apply(analyze_sentiment_textblob)
+    data_frame['Sentiment_VADER'] = data_frame['Content'].progress_apply(analyze_sentiment_vader)
+    bert_results = data_frame['Content'].progress_apply(analyze_sentiment_bert)
     
-    # Boucle pour traiter chaque ligne du DataFrame
-    total_reviews = len(data_frame)
+    data_frame['Sentiment_BERT_Label'] = bert_results.apply(lambda x: x[0])
+    data_frame['Sentiment_BERT_Prob'] = bert_results.apply(lambda x: x[1])
     
-    logger.info("Début du traitement des avis")
-
-    for i, row in data_frame.iterrows():
-        try:
-            text = str(row['Content'])  # Récupérer le texte de la revue
-
-            # Traiter le texte avec TextBlob
-            textblob_sentiment = _analyze_sentiment_textblob(text)
-            sentiment_textblob.append(textblob_sentiment)
-
-            # Traiter le texte avec VADER
-            vader_sentiment = _analyze_sentiment_vader(text)
-            sentiment_vader.append(vader_sentiment)
-
-            # Traiter le texte avec BERT
-            sentiment_result = _analyze_sentiment_bert(text)
-            sentiment_label.append(sentiment_result[0])
-            sentiment_prob.append(sentiment_result[1])
-
-            # Log de l'avancement
-            logger.info(f"Traitement de l'avis {i+1}/{total_reviews}")
-
-        except Exception as e:
-            logger.error(f"Erreur lors du traitement de la revue {i+1}: {e}")
-            # Continuer à traiter les autres avis même si un avis échoue
-            continue
-
-    # Ajouter les résultats au DataFrame
-    data_frame['Sentiment_TextBlob'] = sentiment_textblob
-    data_frame['Sentiment_VADER'] = sentiment_vader
-    data_frame['sentiment_label'] = sentiment_label
-    data_frame['sentiment_prob'] = sentiment_prob
-
-    logger.info("Traitement des avis terminé")
     return data_frame

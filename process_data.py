@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import logging
 from utils.clean_data import clean_and_structure_data
-from utils.extract_sentiment import extract_keywords, analyse_all_sentiments
+from utils.extract_sentiment import extract_keywords, analyze_sentiments
 from utils.scrape_data import scrape_trustpilot_reviews
 from datetime import datetime
 
@@ -41,7 +41,7 @@ def process_data(num_pages=50):
         save_dataframe(keywords_data, f'keywords_data.csv')
 
         # Analyse des sentiments
-        sentiments_analyze = analyse_all_sentiments(data_frame=clean_data)
+        sentiments_analyze = analyze_sentiments(data_frame=clean_data)
         save_dataframe(sentiments_analyze, f'sentiments_analyze.csv')
 
         logger.info("Processus terminé avec succès.")
