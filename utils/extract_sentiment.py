@@ -40,6 +40,7 @@ def extract_keywords(df, n_keywords=10):
     keywords = [feature_names[i] for i in sorted_indices[:n_keywords]]
     return pd.DataFrame(docterm)  # keywords, docterm
 
+
 # Fonction d'analyse de sentiment avec BERT
 def _analyze_sentiment_bert(text):  # Fonction privée (usage interne)
     # Initialiser le pipeline de sentiment avec le modèle BERT
@@ -74,7 +75,7 @@ def analyse_all_sentiments(data_frame):
     data_frame['Sentiment_VADER'] = data_frame['Content'].apply(_analyze_sentiment_vader)
     
     # Utilisation de la fonction BERT pour l'analyse de sentiment avec .apply()
-    data_frame[['Sentiment_BERT_Label', 'Sentiment_BERT_Prob']] = data_frame['Content'].apply(
+    data_frame[['sentiment_label', 'sentiment_prob']] = data_frame['Content'].apply(
         lambda x: pd.Series(_analyze_sentiment_bert(x))
     )
     
