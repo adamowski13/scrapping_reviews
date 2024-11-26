@@ -3,9 +3,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud
 import seaborn as sns
+import plotly.express as px
 
 # Load the dataset
-file_path = "./Tesla_Trustpilot_Reviews_Analyzed.csv"  # Update this path as needed
+file_path = "./data/Tesla_Trustpilot_Reviews_Analyzed.csv"  # Update this path as needed
 data = pd.read_csv(file_path)
 
 # Convert Date to a datetime object
@@ -19,105 +20,242 @@ st.set_page_config(
     layout="wide"
 )
 
-# Sidebar for Theme & Filters
-st.sidebar.title("Dashboard Settings")
-theme_mode = st.sidebar.radio("Select Theme", options=["Light", "Dark"], index=0)
+# Custom HTML Styling for Dashboard
+st.markdown(
+    """
+    <style>
+    body {
+        font-family: 'Arial', sans-serif;
+    }
+    .main-container {
+        padding: 0px 10px;
+    }
+    .title {
+        color: #333;
+        font-size: 45px;
+        font-weight: bold;
+        text-align: center;
+    }
+    .subtitle {
+        color: #666;
+        font-size: 20px;
+        text-align: center;
+        margin-bottom: 40px;
+    }
+    .kpi-container {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 40px;
+    }
+    .kpi-card {
+        background: #f3f4f6;
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        width: 30%;
+        box-shadow: 2px 4px 10px rgba(0,0,0,0.1);
+    }
+    .kpi-card h3 {
+        margin: 0;
+        font-size: 18px;
+        color: #555;
+    }
+    .kpi-card p {
+        margin: 5px 0 0;
+        font-size: 30px;
+        font-weight: bold;
+        color: #333;
+    }
+    .footer {
+        text-align: center;
+        margin-top: 50px;
+        color: #999;
+        font-size: 15px;
+    }
+    </style>
+    <div class="title">🚗 Tesla Reviews Dashboard</div>
+    <div class="subtitle">Explore Customer Feedback and Sentiment Analysis</div>
+    """,
+    unsafe_allow_html=True,
+)
+
+# Sidebar for Filters
+st.sidebar.title("Filters and Settings")
+
+# Add Date Filter
+start_date, end_date = st.sidebar.date_input(
+    "Filter by Date Range",
+    [data['Date'].min().date(), data['Date'].max().date()]
+)
+
+# Add Sentiment Filter
 selected_sentiment = st.sidebar.multiselect(
     "Filter by Sentiment",
     options=data['sentiment_label'].unique(),
     default=data['sentiment_label'].unique()
 )
 
+# Add Rating Filter
+selected_rating = st.sidebar.slider("Filter by Ratings", 1, 5, (1, 5))
+
 # Apply filters
-filtered_data = data[data['sentiment_label'].isin(selected_sentiment)]
+data['Date'] = data['Date'].dt.tz_localize(None)
+filtered_data = data[
+    (data['Date'].between(pd.Timestamp(start_date), pd.Timestamp(end_date))) &
+    (data['sentiment_label'].isin(selected_sentiment)) &
+    (data['Rating'].between(*selected_rating))
+]
 
 # KPIs Section
-st.title("🚗 Tesla Trustpilot Reviews Dashboard")
-st.markdown("---")
+st.markdown(
+    """
+    <div class="kpi-container">
+        <div class="kpi-card">
+            <h3>Total Reviews</h3>
+            <p>{}</p>
+        </div>
+        <div class="kpi-card">
+            <h3>Average Rating</h3>
+            <p>{}</p>
+        </div>
+        <div class="kpi-card">
+            <h3>Most Common Sentiment</h3>
+            <p>{}</p>
+        </div>
+    </div>
+    """.format(
+        len(filtered_data),
+        round(filtered_data['Rating'].mean(), 2) if not filtered_data.empty else "N/A",
+        filtered_data['sentiment_label'].mode()[0] if not filtered_data.empty else "N/A",
+    ),
+    unsafe_allow_html=True,
+)
 
-col1, col2, col3 = st.columns(3)
+# Visualizations Section
+st.markdown("## Visualizations")
 
-# KPI 1: Total Reviews
-with col1:
-    st.metric("📊 Total Reviews", len(filtered_data))
-
-# KPI 2: Average Rating
-with col2:
-    avg_rating = filtered_data['Rating'].mean()
-    st.metric("⭐ Average Rating", round(avg_rating, 2))
-
-# KPI 3: Most Common Sentiment
-with col3:
-    most_common_sentiment = filtered_data['sentiment_label'].mode()[0]
-    st.metric("💬 Most Common Sentiment", most_common_sentiment)
-
-# Visualizations
-st.markdown("---")
+# Use Plotly for Interactivity
+col1, col2 = st.columns(2)
 
 # 1. Ratings Distribution
-st.subheader("Ratings Distribution")
-fig, ax = plt.subplots(figsize=(8, 5))
-sns.barplot(
-    x=filtered_data['Rating'].value_counts().index,
-    y=filtered_data['Rating'].value_counts().values,
-    palette="coolwarm",
-    ax=ax
-)
-ax.set_title("Ratings Distribution")
-ax.set_xlabel("Rating (1-5)")
-ax.set_ylabel("Count")
-st.pyplot(fig)
+with col1:
+    st.markdown("### Ratings Distribution")
+    fig = px.histogram(
+        filtered_data,
+        x="Rating",
+        nbins=5,
+        title="Distribution of Ratings",
+        color_discrete_sequence=["#636EFA"],
+    )
+    fig.update_layout(
+        xaxis_title="Ratings",
+        yaxis_title="Count",
+        title_x=0.5,
+        template="plotly_white",
+    )
+    st.plotly_chart(fig)
 
 # 2. Sentiment Distribution
-st.subheader("Sentiment Distribution")
-fig, ax = plt.subplots(figsize=(8, 5))
-filtered_data['sentiment_label'].value_counts().plot.pie(
-    autopct='%1.1f%%',
-    startangle=140,
-    colors=sns.color_palette("Set2"),
-    ax=ax
-)
-ax.set_ylabel("")
-ax.set_title("Sentiment Distribution")
-st.pyplot(fig)
+with col2:
+    st.markdown("### Sentiment Distribution")
+    fig = px.pie(
+        filtered_data,
+        names="sentiment_label",
+        title="Sentiment Distribution",
+        color_discrete_sequence=px.colors.qualitative.Set3,
+    )
+    fig.update_layout(title_x=0.5, template="plotly_white")
+    st.plotly_chart(fig)
 
 # 3. Word Cloud for Review Content
-st.subheader("Review Word Cloud & Key Terms")
+st.markdown("### Word Cloud of Reviews")
 wordcloud = WordCloud(
     width=800, height=400, background_color="white", colormap="viridis"
 ).generate(" ".join(filtered_data['Content'].dropna()))
-col1, col2 = st.columns([2, 1])
-
-# Display Word Cloud
-with col1:
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.imshow(wordcloud, interpolation="bilinear")
-    ax.axis("off")
-    st.pyplot(fig)
-
-# Display Top Terms
-with col2:
-    from collections import Counter
-    top_terms = Counter(" ".join(filtered_data['Content']).split()).most_common(10)
-    st.write("### Top Terms")
-    for term, count in top_terms:
-        st.write(f"- **{term.capitalize()}**: {count}")
-
-# 4. Ratings Trend Over Time
-st.subheader("Ratings Over Time")
-ratings_over_time = filtered_data.groupby('Month_Year')['Rating'].mean()
-fig, ax = plt.subplots(figsize=(10, 5))
-ratings_over_time.plot(ax=ax, marker="o", color="blue")
-ax.set_title("Average Ratings Over Time")
-ax.set_xlabel("Month-Year")
-ax.set_ylabel("Average Rating")
-ax.grid(alpha=0.5)
+fig, ax = plt.subplots(figsize=(10, 6))
+ax.imshow(wordcloud, interpolation="bilinear")
+ax.axis("off")
 st.pyplot(fig)
 
+# 4. Ratings Over Time
+st.markdown("### Ratings Over Time")
+ratings_over_time = filtered_data.groupby('Month_Year')['Rating'].mean()
+fig = px.line(
+    x=ratings_over_time.index.astype(str),
+    y=ratings_over_time.values,
+    title="Average Ratings Over Time",
+    labels={"x": "Month-Year", "y": "Average Rating"},
+    markers=True,
+)
+fig.update_layout(template="plotly_white", title_x=0.5)
+st.plotly_chart(fig)
+
 # 5. Data Table
-st.subheader("Review Data Table")
+st.markdown("### Filtered Data Table")
 st.dataframe(filtered_data)
 
-# Footer
-st.markdown("---")
+# Footer Section
+st.markdown(
+    """
+    <div class="footer">🚀 Built with Streamlit | Powered by HTML, CSS, and Plotly</div>
+    """,
+    unsafe_allow_html=True,
+)
+from collections import Counter
+import plotly.graph_objects as go
 
+# Word Cloud Interactivity Section
+st.markdown("### Interactive Word Cloud")
+
+# Generate word frequencies
+all_text = " ".join(filtered_data['Content'].dropna())
+word_freq = Counter(all_text.split())
+top_words = word_freq.most_common(100)
+
+# Create data for the Plotly Word Cloud
+words, frequencies = zip(*top_words)
+sizes = [freq * 2 for freq in frequencies]  # Scale sizes for better visualization
+
+# Create interactive Word Cloud using Plotly
+fig = go.Figure()
+
+for word, freq, size in zip(words, frequencies, sizes):
+    fig.add_trace(
+        go.Scatter(
+            x=[freq],  # Frequency as x-axis
+            y=[size],  # Scaled size for display
+            text=[f"Word: {word}<br>Frequency: {freq}"],  # Tooltip
+            mode="markers+text",
+            textfont=dict(size=size, color="black"),
+            marker=dict(
+                size=size,
+                color=freq,
+                colorscale="Viridis",
+                showscale=False,
+            ),
+        )
+    )
+
+# Update layout for better Word Cloud display
+fig.update_layout(
+    showlegend=False,
+    xaxis=dict(showgrid=False, zeroline=False, visible=False),
+    yaxis=dict(showgrid=False, zeroline=False, visible=False),
+    title="Interactive Word Cloud",
+    title_x=0.5,
+    margin=dict(l=0, r=0, t=40, b=0),
+    template="plotly_white",
+)
+
+# Display Word Cloud
+st.plotly_chart(fig, use_container_width=True)
+
+# User Interaction: Select a word
+st.markdown("### Word Frequency Insights")
+selected_word = st.text_input("Enter a word from the Word Cloud to see its frequency:", "")
+
+if selected_word:
+    word_count = word_freq.get(selected_word.lower(), 0)
+    st.write(f"The word **'{selected_word}'** appears **{word_count}** times in the reviews.")
+else:
+    st.write("Enter a word above to see its frequency.")
