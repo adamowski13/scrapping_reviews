@@ -34,10 +34,6 @@ def clean_text(text):
         return ""
     text = re.sub(r"[^a-zA-Z0-9À-ÿ' ]", " ", text)  # Supprimer les caractères spéciaux
     text = re.sub(r"\s+", " ", text).strip()        # Supprimer les espaces multiples
-    if len(text) > 512:
-        text = text[:510]  # Truncate to fit model input size
-    if len(text) < 2:
-        text += "N/A"  # Handle very short or empty reviews
     return text
 
 # Formater la date au format YYYY-MM-DD
