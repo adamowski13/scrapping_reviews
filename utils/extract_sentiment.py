@@ -1,11 +1,7 @@
-from utils.clean_data import clean_and_structure_data
 import pandas as pd
 from textblob import TextBlob
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from sklearn.feature_extraction.text import TfidfVectorizer
-
-# df = pd.read_csv("../Tesla_Trustpilot_Reviews.csv", delimiter=',')
-df = clean_and_structure_data("Tesla_Trustpilot_Reviews.csv", "output")
 
 # Fonction d'analyse de sentiment avec TextBlob
 def analyze_sentiment_textblob(text):
