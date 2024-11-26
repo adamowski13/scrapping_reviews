@@ -70,8 +70,8 @@ def clean_and_structure_data(file_path, output_path):
 
     # Sauvegarder les données nettoyées dans un nouveau fichier CSV
     try:
-        df.to_csv(output_path, index=False)
-        print(f"Fichier nettoyé et structuré sauvegardé sous : {output_path}\n")
+        # df.to_csv(output_path, index=False)
+        # print(f"Fichier nettoyé et structuré sauvegardé sous : {output_path}\n")
         return df
     except Exception as e:
         print(f"Erreur lors de la sauvegarde : {e}")
