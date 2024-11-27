@@ -1,5 +1,4 @@
-import requests
-from bs4 import BeautifulSoup
+import streamlit as st
 import pandas as pd
 import time
 import logging
@@ -88,5 +87,8 @@ def scrape_trustpilot_reviews(num_pages=total_pages):
     
     # Retourner le DataFrame
     return trustpilot_data
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 0e03faf425e249d50aaafb67fc7e68fc8250f512
