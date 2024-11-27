@@ -3,8 +3,8 @@
 ## Project Overview
 This project involves web scraping and sentiment analysis focused on content related to Elon Musk. The project consists of two main components:
 
-1. **Scraping Elon**:
-   - A notebook dedicated to scraping content about Elon Musk from various sources.
+1. **Scraping**:
+   - A script dedicated to scraping content about Elon Musk from various sources.
    - Processes the scraped data to extract meaningful information for analysis.
 
 2. **Sentiment Analysis**:
@@ -17,16 +17,10 @@ This project involves web scraping and sentiment analysis focused on content rel
 - Interactive user interface built with **Streamlit** for displaying analysis results.
 
 ## Installation
-To get started, clone the repository and install the required dependencies:
+The deployment of our application was made through streamlit servers, you can't make it any easier :)
+to access the dashboard, just access this url:
+https://scrappingreviews-zhuspmw6yvmkxae9f8wfeq.streamlit.app/
 
-```bash
-# Clone the repository
-git clone < https://github.com/adamowski13/scrapping_reviews>
-cd <scrapping_reviews>
-
-# Install dependencies
-pip install -r requirements.txt
-```
 
 ## Dependencies
 The project uses the following Python libraries:
@@ -48,25 +42,30 @@ Refer to `requirements.txt` for the full list of dependencies.
 
 ## Usage
 
-### Scraping Notebook
-The notebook `scraping elon.ipynb` includes the logic to scrape and preprocess data related to Elon Musk. To run:
+### Scraping 
+The script `scrape_data.py` includes the logic to scrape and preprocess data related to Tesla
+it does use the website Trustpilot (url: "https://www.trustpilot.com/review/www.teslamotors.com")
+we dynamically get all the data from the website (user, date,content,rating,title) and create a csv file that holds the data of all the pages
 
-1. Open the notebook in your preferred IDE (e.g., Jupyter Notebook).
-2. Run all cells to scrape and store the data for further analysis.
+### clean data 
+The script `clean_data.py` includes the logic clean the data, by deteleing the special caracters using re.sub function, truncate the user comment if too long for the bert model, etc...
 
-### Sentiment Analysis Notebook
-The notebook `treútation anlysis finam version.ipynb` contains sentiment analysis logic. Steps:
+### Sentiment Analysis
+The script `extract_sentiment.py` contains sentiment analysis logic
 
-1. Open the notebook in your IDE.
-2. Provide the scraped data as input.
-3. Run all cells to perform sentiment analysis and visualize the results.
+## parent file
+extract_sentiment.py is the main function of treatment (excluding stramlit), it calls all the modules we created and described earlier and run them in the right order so we get the whole chain running
+
+
+1. using textblob model based on ntlk
+2. using vader model
+3. using Bert based on neuralinks for the analysis and using context
+
+It also add columns with each model score (between -1 and 1) for the comment and it's interpretation (positive,negative,etc...)
 
 ### Streamlit App
-An optional Streamlit app can be created to visualize the analysis results interactively:
+A Streamlit app can be created to visualize the analysis results interactively through the running of the docker image locally. it'll just need an empty port that can be modified through the command line
 
-```bash
-streamlit run <streamlit_script.py>
-```
 
 ## Outputs
 - Scraped data files ready for analysis.
