@@ -2,46 +2,83 @@ import pandas as pd
 from textblob import TextBlob
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from sklearn.feature_extraction.text import TfidfVectorizer
+from transformers import pipeline
+from transformers import logging as transformers_logging
+import torch
+from tqdm import tqdm
+
+# Configuration du logging
+transformers_logging.set_verbosity_error()
+
+# Vérifie si un GPU est disponible
+DEVICE = 0 if torch.cuda.is_available() else -1
+
+# Pipeline BERT pour l'analyse de sentiment
+bert_analyzer = pipeline(
+    task='text-classification',
+    model="nlptown/bert-base-multilingual-uncased-sentiment",
+    tokenizer="nlptown/bert-base-multilingual-uncased-sentiment",
+    device=DEVICE
+)
+
+# Mappage des labels de BERT
+label2emotion = {
+    '1 star': "très négatif",
+    '2 stars': "négatif",
+    '3 stars': "neutre",
+    '4 stars': "positif",
+    '5 stars': "très positif"
+}
 
 # Fonction d'analyse de sentiment avec TextBlob
 def analyze_sentiment_textblob(text):
     try:
-        # Utilisation de TextBlob pour obtenir la polarité (positif, négatif, neutre)
         analysis = TextBlob(text)
         return analysis.sentiment.polarity
-    except Exception as e:
-        print(f"Erreur dans l'analyse avec TextBlob: {e}")
+    except Exception:
         return None
 
 # Fonction d'analyse de sentiment avec VADER
 def analyze_sentiment_vader(text):
-    analyzer = SentimentIntensityAnalyzer()
     try:
-        # Analyser le texte et renvoyer le score de sentiment
+        analyzer = SentimentIntensityAnalyzer()
         sentiment_score = analyzer.polarity_scores(text)
-        return sentiment_score['compound']  # Renvoie un score global de sentiment
-    except Exception as e:
-        print(f"Erreur dans l'analyse avec VADER: {e}")
+        return sentiment_score['compound']
+    except Exception:
         return None
 
-# Appliquer TF-IDF sur le contenu pour extraire les mots-clés
+# Fonction d'analyse de sentiment avec BERT
+def analyze_sentiment_bert(text):
+    try:
+        result = bert_analyzer(text, truncation=True, max_length=512, return_all_scores=True)
+        max_result = max(result[0], key=lambda x: x['score'])
+        label = label2emotion[max_result['label']]
+        prob = round(max_result['score'] * 100, 2)
+        return label, prob
+    except Exception:
+        return None, None
+
+# Extraction des mots-clés avec TF-IDF
 def extract_keywords(df, n_keywords=10):
-    vectorizer = TfidfVectorizer(stop_words='english', max_features=50)
-    tfidf_matrix = vectorizer.fit_transform(df['Content'])
+    try:
+        vectorizer = TfidfVectorizer(stop_words='english', max_features=n_keywords)
+        tfidf_matrix = vectorizer.fit_transform(df['Content'].astype(str))
+        feature_names = vectorizer.get_feature_names_out()
+        return feature_names
+    except Exception as e:
+        print(f"Erreur d'extraction des mots-clés : {e}")
+        return []
 
-    # Récupérer les mots-clés en fonction de leur score TF-IDF
-    feature_names = vectorizer.get_feature_names_out()
-
-    docterm = pd.DataFrame(tfidf_matrix.todense(), columns=feature_names)
-
-    sorted_indices = tfidf_matrix.sum(axis=0).argsort()[0, ::-1]  # Tri des indices des mots-clés
-    # Récupérer les meilleurs mots-clés
-    keywords = [feature_names[i] for i in sorted_indices[:n_keywords]]
-    return pd.DataFrame(docterm) # keywords, docterm
-
-def analyse_all_sentiments(data_frame):
-
-    data_frame['Sentiment_TextBlob'] = data_frame['Content'].apply(analyze_sentiment_textblob)
-    data_frame['Sentiment_VADER'] = data_frame['Content'].apply(analyze_sentiment_vader)
-
+# Fonction principale d'analyse des sentiments
+def analyze_sentiments(data_frame):
+    tqdm.pandas(desc="Analyse des sentiments")
+    
+    # Ajoute les colonnes calculées
+    data_frame['Sentiment_TextBlob'] = data_frame['Content'].progress_apply(analyze_sentiment_textblob)
+    data_frame['Sentiment_VADER'] = data_frame['Content'].progress_apply(analyze_sentiment_vader)
+    bert_results = data_frame['Content'].progress_apply(analyze_sentiment_bert)
+    
+    data_frame['Sentiment_BERT_Label'] = bert_results.apply(lambda x: x[0])
+    data_frame['Sentiment_BERT_Prob'] = bert_results.apply(lambda x: x[1])
+    
     return data_frame
