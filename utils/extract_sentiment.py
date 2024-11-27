@@ -10,7 +10,7 @@ from tqdm import tqdm
 # Configuration du logging
 transformers_logging.set_verbosity_error()
 
-# Vérifie si un GPU est disponible
+# Vérifie si un GPU est disponible sinon CPU
 DEVICE = 0 if torch.cuda.is_available() else -1
 
 # Pipeline BERT pour l'analyse de sentiment
