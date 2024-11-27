@@ -3,6 +3,8 @@ import pandas as pd
 import time
 import logging
 import json
+import requests
+from bs4 import BeautifulSoup
 
 # Configurer les logs
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -87,8 +89,4 @@ def scrape_trustpilot_reviews(num_pages=total_pages):
     
     # Retourner le DataFrame
     return trustpilot_data
-<<<<<<< HEAD
 
-
-=======
->>>>>>> 0e03faf425e249d50aaafb67fc7e68fc8250f512
