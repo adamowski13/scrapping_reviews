@@ -63,6 +63,20 @@ def analyze_sentiment_bert(text):
         return label, prob
     except Exception:
         return None, None
+    
+def categorization_label(col):
+    if col<=(-0.6) and col>=(-1):
+        return "trés négatif"
+    if col<(-0.2) and col>(-0.6):
+        return "négatif"
+    if col<=(0.2) and col>=(-0.2):
+        return "neutre"
+    if col<(0.6) and col>(0.2):
+        return "positif"
+    if col<=(1) and col>=(0.6):
+        return "très positif"
+    else:
+        return "Null"
 
 # Extraction des mots-clés avec TF-IDF
 def extract_keywords(df, n_keywords=10):
@@ -96,16 +110,5 @@ def analyze_sentiments(data_frame):
     
     return data_frame
 
-def categorization_label(col):
-    if col<=(-0.6) and col>=(-1):
-        return "trés négatif"
-    if col<(-0.2) and col>(-0.6):
-        return "négatif"
-    if col<=(0.2) and col>=(-0.2):
-        return "neutre"
-    if col<(0.6) and col>(0.2):
-        return "positif"
-    if col<=(1) and col>=(0.6):
-        return "très positif"
-    else:return "Null"
+
     
