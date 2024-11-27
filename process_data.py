@@ -20,10 +20,10 @@ def save_dataframe(df, file_name):
         logger.error(f"Erreur lors de la sauvegarde du fichier {file_name}: {e}")
 
 # Fonction principale de traitement
-def process_data(num_pages=50):
+def process_data():
     try:
         # Scraper les données
-        scrape_data = scrape_trustpilot_reviews(num_pages=num_pages)
+        scrape_data = scrape_trustpilot_reviews()
         if scrape_data.empty:
             logger.warning("Aucune donnée récupérée lors du scraping.")
             return
@@ -50,4 +50,4 @@ def process_data(num_pages=50):
         logger.error(f"Erreur dans le processus de traitement des données : {e}")
 
 if __name__ == "__main__":
-    process_data(num_pages=50)
+    process_data()
