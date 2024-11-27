@@ -56,7 +56,7 @@ def analyze_sentiment_vader(text):
 # Fonction d'analyse de sentiment avec BERT
 def analyze_sentiment_bert(text):
     try:
-        result = bert_analyzer(text, truncation=True, max_length=512, top_k=None)
+        result = bert_analyzer(text, truncation=True, max_length=512, return_all_scores=True)
         max_result = max(result[0], key=lambda x: x['score'])
         label = label2emotion[max_result['label']]
         prob = round(max_result['score'] * 100, 2)

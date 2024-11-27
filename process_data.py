@@ -22,6 +22,7 @@ def save_dataframe(df, file_name):
 # Fonction principale de traitement
 def process_data():
     try:
+       
         # Scraper les données
         scrape_data = scrape_trustpilot_reviews()
         if scrape_data.empty:
