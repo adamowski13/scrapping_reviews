@@ -82,10 +82,12 @@ def analyze_sentiments(data_frame):
     tqdm.pandas(desc="Analyse des sentiments TextBlob")
     # Ajoute les colonnes calculées
     data_frame['Sentiment_TextBlob'] = data_frame['Content'].progress_apply(analyze_sentiment_textblob)
-    
+    data_frame['Sentiment_TextBlob_label']=data_frame['Sentiment_TextBlob'].apply(categorization_label)
+
     tqdm.pandas(desc="Analyse des sentiments VADER")
     data_frame['Sentiment_VADER'] = data_frame['Content'].progress_apply(analyze_sentiment_vader)
-    
+    data_frame['Sentiment_VADER_label']=data_frame['Sentiment_VADER'].apply(categorization_label)
+
     tqdm.pandas(desc="Analyse des sentiments BERT")
     bert_results = data_frame['Content'].progress_apply(analyze_sentiment_bert)
     # ajoutt des données dans le data frame
@@ -93,3 +95,17 @@ def analyze_sentiments(data_frame):
     data_frame['Sentiment_BERT_Prob'] = bert_results.apply(lambda x: x[1])
     
     return data_frame
+
+def categorization_label(col):
+    if col<=(-0.6) and col>=(-1):
+        return "trés négatif"
+    if col<(-0.2) and col>(-0.6):
+        return "négatif"
+    if col<=(0.2) and col>=(-0.2):
+        return "neutre"
+    if col<(0.6) and col>(0.2):
+        return "positif"
+    if col<=(1) and col>=(0.6):
+        return "très positif"
+    else:return "Null"
+    
