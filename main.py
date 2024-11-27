@@ -2,188 +2,260 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud
+import seaborn as sns
 import plotly.express as px
 
-# Charger les données
-file_path = "./data/sentiments_analyze.csv"  # Mettez à jour ce chemin si nécessaire
-keywords_file_path = "./data/keywords_data.csv"  # Mettez à jour ce chemin si nécessaire
-
+# Load the dataset
+file_path = "./data/Tesla_Trustpilot_Reviews_Analyzed.csv"  # Update this path as needed
 data = pd.read_csv(file_path)
-keywords_data = pd.read_csv(keywords_file_path)
 
-# Préparer les données des sentiments
+# Convert Date to a datetime object
 data['Date'] = pd.to_datetime(data['Date'])
 data['Month_Year'] = data['Date'].dt.to_period('M')
 
-# Configuration de la page
+# Custom Page Configuration
 st.set_page_config(
-    page_title="Dashboard des Avis Tesla",
+    page_title="Tesla Reviews Dashboard",
     page_icon="🚗",
     layout="wide"
 )
 
-# Titre principal
-st.markdown("<h1 style='text-align: center;'>🚗 Dashboard des Avis Tesla</h1>", unsafe_allow_html=True)
-st.markdown("<h3 style='text-align: center;'>Explorez les avis, sentiments et mots-clés des utilisateurs</h3>", unsafe_allow_html=True)
+# Custom HTML Styling for Dashboard
+st.markdown(
+    """
+    <style>
+    body {
+        font-family: 'Arial', sans-serif;
+    }
+    .main-container {
+        padding: 0px 10px;
+    }
+    .title {
+        color: #333;
+        font-size: 45px;
+        font-weight: bold;
+        text-align: center;
+    }
+    .subtitle {
+        color: #666;
+        font-size: 20px;
+        text-align: center;
+        margin-bottom: 40px;
+    }
+    .kpi-container {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 40px;
+    }
+    .kpi-card {
+        background: #f3f4f6;
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        width: 30%;
+        box-shadow: 2px 4px 10px rgba(0,0,0,0.1);
+    }
+    .kpi-card h3 {
+        margin: 0;
+        font-size: 18px;
+        color: #555;
+    }
+    .kpi-card p {
+        margin: 5px 0 0;
+        font-size: 30px;
+        font-weight: bold;
+        color: #333;
+    }
+    .footer {
+        text-align: center;
+        margin-top: 50px;
+        color: #999;
+        font-size: 15px;
+    }
+    </style>
+    <div class="title">🚗 Tesla Reviews Dashboard</div>
+    <div class="subtitle">Explore Customer Feedback and Sentiment Analysis</div>
+    """,
+    unsafe_allow_html=True,
+)
 
-# Section des KPI
-st.markdown("## 🧮 Indicateurs Clés de Performance")
-kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
+# Sidebar for Filters
+st.sidebar.title("Filters and Settings")
 
-with kpi_col1:
-    total_reviews = len(data)
-    st.metric(label="Total des Avis", value=total_reviews)
-
-with kpi_col2:
-    avg_rating = round(data['Rating'].mean(), 2)
-    st.metric(label="Note Moyenne", value=avg_rating)
-
-with kpi_col3:
-    common_sentiment = data['Sentiment_BERT_Label'].mode()[0]
-    st.metric(label="Sentiment Dominant", value=common_sentiment)
-
-# Filtres
-st.sidebar.title("Filtres")
+# Add Date Filter
 start_date, end_date = st.sidebar.date_input(
-    "Filtrer par plage de dates",
+    "Filter by Date Range",
     [data['Date'].min().date(), data['Date'].max().date()]
 )
-selected_sentiment = st.sidebar.multiselect(
-    "Filtrer par sentiment",
-    options=data['Sentiment_BERT_Label'].unique(),
-    default=data['Sentiment_BERT_Label'].unique()
-)
-selected_rating = st.sidebar.slider("Filtrer par notes", 1, 5, (1, 5))
 
-# Appliquer les filtres
+# Add Sentiment Filter
+selected_sentiment = st.sidebar.multiselect(
+    "Filter by Sentiment",
+    options=data['sentiment_label'].unique(),
+    default=data['sentiment_label'].unique()
+)
+
+# Add Rating Filter
+selected_rating = st.sidebar.slider("Filter by Ratings", 1, 5, (1, 5))
+
+# Apply filters
+data['Date'] = data['Date'].dt.tz_localize(None)
 filtered_data = data[
-    (data['Date'] >= pd.Timestamp(start_date)) &
-    (data['Date'] <= pd.Timestamp(end_date)) &
-    (data['Sentiment_BERT_Label'].isin(selected_sentiment)) &
+    (data['Date'].between(pd.Timestamp(start_date), pd.Timestamp(end_date))) &
+    (data['sentiment_label'].isin(selected_sentiment)) &
     (data['Rating'].between(*selected_rating))
 ]
 
-# Section : Visualisations principales
-st.markdown("## 📊 Visualisations des Avis et Sentiments")
-
-# Visualisation 1 : Répartition des notes
-st.markdown("### Répartition des Notes")
-fig = px.histogram(
-    filtered_data,
-    x="Rating",
-    nbins=5,
-    title="Répartition des Notes",
-    labels={"Rating": "Notes", "count": "Nombre d'Avis"},
-    color_discrete_sequence=["#636EFA"]
-)
-st.plotly_chart(fig, use_container_width=True)
-st.write("""
-**Observation :** La répartition des notes montre que la majorité des utilisateurs attribuent une note de 4 ou 5, indiquant une satisfaction générale. Les notes inférieures à 3 sont rares, ce qui reflète une bonne perception globale du produit/service Tesla.
-""")
-
-# Visualisation 2 : Distribution des sentiments
-st.markdown("### Distribution des Sentiments")
-fig = px.pie(
-    filtered_data,
-    names="Sentiment_BERT_Label",
-    title="Distribution des Sentiments",
-    color_discrete_sequence=px.colors.qualitative.Set3
-)
-st.plotly_chart(fig, use_container_width=True)
-st.write("""
-**Observation :** Les sentiments positifs dominent les avis, tandis que les sentiments négatifs restent marginaux. Cela confirme que Tesla satisfait généralement ses clients.
-""")
-
-# Visualisation 3 : Évolution des notes dans le temps
-st.markdown("### Évolution des Notes dans le Temps")
-ratings_over_time = filtered_data.groupby('Month_Year')['Rating'].mean()
-fig = px.line(
-    x=ratings_over_time.index.astype(str),
-    y=ratings_over_time.values,
-    title="Évolution des Notes Moyennes dans le Temps",
-    labels={"x": "Mois-Année", "y": "Note Moyenne"},
-    markers=True
-)
-st.plotly_chart(fig, use_container_width=True)
-st.write("""
-**Observation :** Les notes moyennes montrent une stabilité globale au fil du temps. Cependant, des fluctuations ponctuelles peuvent être observées, reflétant des événements spécifiques comme des lancements de produits ou des problèmes de service.
-""")
-
-# Comparaison des modèles de sentiment
-st.markdown("## 🧠 Comparaison des Modèles de Sentiment")
-
-model_comparison = pd.DataFrame({
-    "Modèle": ["BERT", "TextBlob", "VADER"],
-    "Positif": [
-        (filtered_data['Sentiment_BERT_Label'] == 'positif').sum(),
-        (filtered_data['Sentiment_TextBlob'] > 0).sum(),
-        (filtered_data['Sentiment_VADER'] > 0).sum()
-    ],
-    "Négatif": [
-        (filtered_data['Sentiment_BERT_Label'] == 'négatif').sum(),
-        (filtered_data['Sentiment_TextBlob'] < 0).sum(),
-        (filtered_data['Sentiment_VADER'] < 0).sum()
-    ],
-    "Très positif": [
-        (filtered_data['Sentiment_BERT_Label'] == 'très positif').sum(),
-        0,  # TextBlob et VADER n'ont pas de catégorie "très positif"
-        0
-    ],
-    "Très négatif": [
-        (filtered_data['Sentiment_BERT_Label'] == 'très négatif').sum(),
-        0,  # TextBlob et VADER n'ont pas de catégorie "très négatif"
-        0
-    ]
-})
-
-model_comparison_melted = model_comparison.melt(
-    id_vars="Modèle", var_name="Sentiment", value_name="Nombre"
+# KPIs Section
+st.markdown(
+    """
+    <div class="kpi-container">
+        <div class="kpi-card">
+            <h3>Total Reviews</h3>
+            <p>{}</p>
+        </div>
+        <div class="kpi-card">
+            <h3>Average Rating</h3>
+            <p>{}</p>
+        </div>
+        <div class="kpi-card">
+            <h3>Most Common Sentiment</h3>
+            <p>{}</p>
+        </div>
+    </div>
+    """.format(
+        len(filtered_data),
+        round(filtered_data['Rating'].mean(), 2) if not filtered_data.empty else "N/A",
+        filtered_data['sentiment_label'].mode()[0] if not filtered_data.empty else "N/A",
+    ),
+    unsafe_allow_html=True,
 )
 
-fig = px.bar(
-    model_comparison_melted,
-    x="Modèle",
-    y="Nombre",
-    color="Sentiment",
-    barmode="stack",
-    title="Comparaison des Modèles de Sentiment",
-    labels={"Nombre": "Nombre d'Avis", "Modèle": "Modèles", "Sentiment": "Sentiments"}
-)
-st.plotly_chart(fig, use_container_width=True)
-st.write("""
-**Observation :** Le modèle BERT détecte des sentiments extrêmes ("très positif" et "très négatif"), ce qui le rend plus granulaire. TextBlob et VADER sont plus limités mais offrent une vue simplifiée.
-""")
+# Visualizations Section
+st.markdown("## Visualizations")
 
-# Section : Visualisations des mots-clés
-st.markdown("## ☁️ Visualisations des Mots-Clés")
+# Use Plotly for Interactivity
+col1, col2 = st.columns(2)
 
-# Nuage de mots
-st.markdown("### Nuage de Mots")
-keywords_mean = keywords_data.mean().sort_values(ascending=False)
+# 1. Ratings Distribution
+with col1:
+    st.markdown("### Ratings Distribution")
+    fig = px.histogram(
+        filtered_data,
+        x="Rating",
+        nbins=5,
+        title="Distribution of Ratings",
+        color_discrete_sequence=["#636EFA"],
+    )
+    fig.update_layout(
+        xaxis_title="Ratings",
+        yaxis_title="Count",
+        title_x=0.5,
+        template="plotly_white",
+    )
+    st.plotly_chart(fig)
+
+# 2. Sentiment Distribution
+with col2:
+    st.markdown("### Sentiment Distribution")
+    fig = px.pie(
+        filtered_data,
+        names="sentiment_label",
+        title="Sentiment Distribution",
+        color_discrete_sequence=px.colors.qualitative.Set3,
+    )
+    fig.update_layout(title_x=0.5, template="plotly_white")
+    st.plotly_chart(fig)
+
+# 3. Word Cloud for Review Content
+st.markdown("### Word Cloud of Reviews")
 wordcloud = WordCloud(
-    width=800,
-    height=400,
-    background_color="white",
-    colormap="coolwarm"
-).generate_from_frequencies(keywords_mean)
+    width=800, height=400, background_color="white", colormap="viridis"
+).generate(" ".join(filtered_data['Content'].dropna()))
 fig, ax = plt.subplots(figsize=(10, 6))
 ax.imshow(wordcloud, interpolation="bilinear")
 ax.axis("off")
 st.pyplot(fig)
-st.write("""
-**Observation :** Les mots les plus fréquents, tels que "car" et "service", sont probablement liés à l'expérience directe des utilisateurs avec Tesla.
-""")
 
-# Top 10 mots-clés
-st.markdown("### Top 10 des Mots-Clés")
-top_keywords = keywords_mean.head(10)
-fig = px.bar(
-    x=top_keywords.index,
-    y=top_keywords.values,
-    labels={"x": "Mots-Clés", "y": "Valeurs Moyennes"},
-    title="Top 10 des Mots-Clés les Plus Fréquents"
+# 4. Ratings Over Time
+st.markdown("### Ratings Over Time")
+ratings_over_time = filtered_data.groupby('Month_Year')['Rating'].mean()
+fig = px.line(
+    x=ratings_over_time.index.astype(str),
+    y=ratings_over_time.values,
+    title="Average Ratings Over Time",
+    labels={"x": "Month-Year", "y": "Average Rating"},
+    markers=True,
 )
+fig.update_layout(template="plotly_white", title_x=0.5)
+st.plotly_chart(fig)
+
+# 5. Data Table
+st.markdown("### Filtered Data Table")
+st.dataframe(filtered_data)
+
+# Footer Section
+st.markdown(
+    """
+    <div class="footer">🚀 Built with Streamlit | Powered by HTML, CSS, and Plotly</div>
+    """,
+    unsafe_allow_html=True,
+)
+from collections import Counter
+import plotly.graph_objects as go
+
+# Word Cloud Interactivity Section
+st.markdown("### Interactive Word Cloud")
+
+# Generate word frequencies
+all_text = " ".join(filtered_data['Content'].dropna())
+word_freq = Counter(all_text.split())
+top_words = word_freq.most_common(100)
+
+# Create data for the Plotly Word Cloud
+words, frequencies = zip(*top_words)
+sizes = [freq * 2 for freq in frequencies]  # Scale sizes for better visualization
+
+# Create interactive Word Cloud using Plotly
+fig = go.Figure()
+
+for word, freq, size in zip(words, frequencies, sizes):
+    fig.add_trace(
+        go.Scatter(
+            x=[freq],  # Frequency as x-axis
+            y=[size],  # Scaled size for display
+            text=[f"Word: {word}<br>Frequency: {freq}"],  # Tooltip
+            mode="markers+text",
+            textfont=dict(size=size, color="black"),
+            marker=dict(
+                size=size,
+                color=freq,
+                colorscale="Viridis",
+                showscale=False,
+            ),
+        )
+    )
+
+# Update layout for better Word Cloud display
+fig.update_layout(
+    showlegend=False,
+    xaxis=dict(showgrid=False, zeroline=False, visible=False),
+    yaxis=dict(showgrid=False, zeroline=False, visible=False),
+    title="Interactive Word Cloud",
+    title_x=0.5,
+    margin=dict(l=0, r=0, t=40, b=0),
+    template="plotly_white",
+)
+
+# Display Word Cloud
 st.plotly_chart(fig, use_container_width=True)
-st.write("""
-**Observation :** Les mots-clés principaux mettent en avant les thèmes récurrents des avis, comme les performances de la voiture, le service client ou l'application.
-""")
+
+# User Interaction: Select a word
+st.markdown("### Word Frequency Insights")
+selected_word = st.text_input("Enter a word from the Word Cloud to see its frequency:", "")
+
+if selected_word:
+    word_count = word_freq.get(selected_word.lower(), 0)
+    st.write(f"The word **'{selected_word}'** appears **{word_count}** times in the reviews.")
+else:
+    st.write("Enter a word above to see its frequency.")

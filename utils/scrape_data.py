@@ -3,14 +3,36 @@ import pandas as pd
 import time
 import logging
 import json
+import requests
+from bs4 import BeautifulSoup
 
 # Configurer les logs
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-def scrape_trustpilot_reviews(base_url: str, num_pages: int):
-    params = "?page="
-    base_url_page = base_url + params
+base_url = "https://www.trustpilot.com/review/www.teslamotors.com"
+response = requests.get(base_url)
+
+# Parser le contenu HTML
+soup = BeautifulSoup(response.text, 'html.parser')
+script_tag = soup.find('script', {'id': '__NEXT_DATA__'})
+
+if script_tag:
+    try:
+        # Charger le JSON à partir du script
+        json_data = json.loads(script_tag.string)
+
+        # Accéder à `totalPages`
+        total_pages = json_data['props']['pageProps']['filters']['pagination']['totalPages']
+        logger.info(f"Le nombre total de pages est : \n{json.dumps(total_pages, indent=4)}")
+    except (KeyError, TypeError, json.JSONDecodeError) as e:
+        logger.error(f"Erreur lors de l'analyse des données JSON : {e}")
+else:
+    logger.warning("Impossible de trouver les données nécessaires.")
+
+def scrape_trustpilot_reviews(num_pages=total_pages):
+    base_url = "https://www.trustpilot.com/review/www.teslamotors.com?page="
+
     # Initialisation des listes pour stocker les données extraites
     review_titles = []
     review_contents = []
@@ -20,7 +42,7 @@ def scrape_trustpilot_reviews(base_url: str, num_pages: int):
 
     # Boucle pour scraper plusieurs pages
     for page in range(1, num_pages + 1):  
-        url = base_url_page + str(page)
+        url = base_url + str(page)
         logger.info(f"Scraping page {page}...")
         
         # Faire une requête HTTP pour récupérer le contenu de la page
@@ -67,3 +89,4 @@ def scrape_trustpilot_reviews(base_url: str, num_pages: int):
     
     # Retourner le DataFrame
     return trustpilot_data
+
