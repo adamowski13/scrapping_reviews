@@ -24,7 +24,7 @@ if script_tag:
 
         # Accéder à `totalPages`
         total_pages = json_data['props']['pageProps']['filters']['pagination']['totalPages']
-        logger.info(f"Le nombre total de pages est : \n{json.dumps(total_pages, indent=4)}")
+        logger.info(f"Le nombre total de pages est : {total_pages}")
     except (KeyError, TypeError, json.JSONDecodeError) as e:
         logger.error(f"Erreur lors de l'analyse des données JSON : {e}")
 else:
@@ -41,7 +41,7 @@ def scrape_trustpilot_reviews(num_pages=total_pages):
     usernames = []
 
     # Boucle pour scraper plusieurs pages
-    for page in range(1, num_pages + 1):  
+    for page in range(1, num_pages):  
         url = base_url + str(page)
         logger.info(f"Scraping page {page}...")
         
