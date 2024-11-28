@@ -22,20 +22,25 @@ def save_dataframe(df, file_name):
 # Fonction principale de traitement
 def process_data():
     try:
-       
+      
         # Scraper les données
         scrape_data = scrape_trustpilot_reviews()
         if scrape_data.empty:
             logger.warning("Aucune donnée récupérée lors du scraping.")
             return
         save_dataframe(scrape_data, f'scrape_data.csv')
-
+ 
         # Nettoyage des données
         clean_data = clean_and_structure_data(file_path='.\\data\\scrape_data.csv')
         if clean_data.empty:
             logger.warning("Aucune donnée nettoyée.")
             return
-        save_dataframe(clean_data, f'clean_data.csv')
+        
+        df_model= clean_data.iloc[:-50]
+        df_test=clean_data.iloc[-50:]
+        save_dataframe(df_model, f'clean_data.csv')
+        df_test.to_csv(".\\data\\echantillon_validation_test.csv", index=False, encoding='utf-8-sig')
+
 
         # Extraction des mots-clés
         keywords_data = extract_keywords(df=clean_data)
@@ -45,8 +50,8 @@ def process_data():
         sentiments_analyze = analyze_sentiments(data_frame=clean_data)
         save_dataframe(sentiments_analyze, f'sentiments_analyze.csv')
 
-        logger.info("Processus terminé avec succès.")
-    
+        logger.info('Processus terminé avec succès.')
+ 
     except Exception as e:
         logger.error(f"Erreur dans le processus de traitement des données : {e}")
 
