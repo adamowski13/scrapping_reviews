@@ -18,8 +18,18 @@ This project involves web scraping and sentiment analysis focused on content rel
 
 ## Installation
 The deployment of our application was made through streamlit servers, you can't make it any easier :)
+###streamlit server
 to access the dashboard, just access this url:
 https://scrappingreviews-zhuspmw6yvmkxae9f8wfeq.streamlit.app/
+
+###Docker Image
+In case you find issues with the url (as a free server it could be down for exemple), you can also pull our docker Image locally and it will run on your port 8501 (you can also choose another one to run).
+
+docker pull juliendira/tesla-reviews-dashboard
+
+docker run -it juliendira/tesla-reviews-dashboard
+In case you want to change the deployement port, use this run command instead
+docker run -it -p [your_port]:[container_port] juliendira/tesla-reviews-dashboard
 
 
 ## Dependencies
