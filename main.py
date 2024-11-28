@@ -78,7 +78,7 @@ fig = px.histogram(
 )
 st.plotly_chart(fig, use_container_width=True)
 st.write("""
-**Observation :** La répartition des notes montre que la majorité des utilisateurs attribuent une note très negative indiquant un avis général sur la marque au plus bas. Les notes au dessus de 1 sont rares, ce qui reflète une mauvaise image globale de la marque Tesla dans l'opinion des utilisateurs de Trustpilot.
+**Observation :** La répartition des notes montre que la majorité des utilisateurs attribuent une note de 4 ou 5, indiquant une satisfaction générale. Les notes inférieures à 3 sont rares, ce qui reflète une bonne perception globale du produit/service Tesla.
 """)
 
 # Visualisation 2 : Distribution des sentiments
@@ -91,7 +91,7 @@ fig = px.pie(
 )
 st.plotly_chart(fig, use_container_width=True)
 st.write("""
-**Observation :** Les sentiments négatifs dominent les avis, tandis que les sentiments positifs restent marginaux. Cela confirme que Tesla ne satisfait généralement que très rarement ses clients.
+**Observation :** Les sentiments positifs dominent les avis, tandis que les sentiments négatifs restent marginaux. Cela confirme que Tesla satisfait généralement ses clients.
 """)
 
 # Visualisation 3 : Évolution des notes dans le temps
@@ -106,7 +106,7 @@ fig = px.line(
 )
 st.plotly_chart(fig, use_container_width=True)
 st.write("""
-**Observation :** Les notes moyennes montrent une stabilité globale au fil du temps, et ce sur plusieurs années a la suite, avec néanmoins quelques pics a la fin des années 2010. Ces fluctuations ponctuelles peuvent refléter des événements spécifiques comme des lancements de produits ou des problèmes de service.
+**Observation :** Les notes moyennes montrent une stabilité globale au fil du temps. Cependant, des fluctuations ponctuelles peuvent être observées, reflétant des événements spécifiques comme des lancements de produits ou des problèmes de service.
 """)
 
 # Comparaison des modèles de sentiment
@@ -151,9 +151,7 @@ fig = px.bar(
 )
 st.plotly_chart(fig, use_container_width=True)
 st.write("""
-**Observation :** Le modèle BERT détecte des sentiments extrêmes allant de très positif à très négatif, ce qui le rend plus granulaire. TextBlob et VADER sont plus limités. On peut remarquer la précision de bert, dont les estimations de sentiments correspondent plus au moins a quelques pourcent près au ratio commentaire/notes.
-         En effet, les avis très négatifs dominent, comme remarqué suite au scrapping avec les notes des utilisateurs qui tournent autour de 1 pour la majorité.
-         Quand à vader et textblob, les résultats ne sont pas vraiment cohérents en comparaison, avec le taux d'avis positif qui est meme majoritaire sur TextBlob. On ne pas donc pas les considérer comme fiable dans notre cas.
+**Observation :** Le modèle BERT détecte des sentiments extrêmes ("très positif" et "très négatif"), ce qui le rend plus granulaire. TextBlob et VADER sont plus limités mais offrent une vue simplifiée.
 """)
 
 # Section : Visualisations des mots-clés
@@ -161,7 +159,7 @@ st.markdown("## ☁️ Visualisations des Mots-Clés")
 
 # Nuage de mots
 st.markdown("### Nuage de Mots")
-keywords_mean = keywords_data.mean().sort_values(ascending=False)
+keywords_mean = data.mean().sort_values(ascending=False)
 wordcloud = WordCloud(
     width=800,
     height=400,
